@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<!-- 권장: zoom 허용을 위해 maximum-scale/user-scalable 제거 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lexicon">
+<meta name="application-name" content="Lexicon">
+<meta name="theme-color" content="#0b1020">
+<meta name="format-detection" content="telephone=no">
+<title>Lexicon Pro — Advanced Vocabulary</title>
+<link rel="manifest" id="manifestLink">
+<link rel="apple-touch-icon" id="appleIcon">
+<link rel="icon" id="favIcon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,500&family=Noto+Sans+KR:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#141a30; --panel2:#1b2340; --line:#2a3358;
+    --ink:#eef1fb; --muted:#97a0c3; --accent:#d4b06a; --accent2:#7aa2ff;
+    --known:#3ecf8e; --review:#ff8a65;
+    --focus: rgba(122,162,255,0.28);
+  }
+  html,body{height:100%;background:var(--bg);color:var(--ink);}
+  body{
+    font-family:'Inter','Noto Sans KR',system-ui,-apple-system,sans-serif;
+    -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%;
+    touch-action:manipulation; overscroll-behavior:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(1200px 600px at 50% -10%, #1d2752 0%, var(--bg) 60%) fixed;
+  }
+  .app{height:100dvh;max-height:-webkit-fill-available;}
+  .serif{font-family:'Playfair Display',Georgia,serif;}
+  .kr{font-family:'Noto Sans KR',sans-serif;}
+  .scene{perspective:1400px;}
+  .card3d{position:relative;width:100%;height:100%;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;
+    transition:transform .6s cubic-bezier(.2,.8,.2,1);}
+  .card3d.flipped{transform:rotateY(180deg);}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:28px;
+    background:linear-gradient(160deg,var(--panel2) 0%,var(--panel) 100%);border:1px solid var(--line);
+    box-shadow:0 20px 50px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04);}
+  .back{transform:rotateY(180deg);overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .chip{white-space:nowrap;border:1px solid var(--line);color:var(--muted);}
+  .chip.active{background:var(--accent);color:#1a1405;border-color:var(--accent);font-weight:600;}
+  .btn{transition:transform .12s ease, background .2s ease, opacity .2s;}
+  .btn:active{transform:scale(.94);}
+  .btn:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:12px;}
+  .label{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;}
+  .bar{transition:width .45s cubic-bezier(.2,.8,.2,1);}
+  .fade-in{animation:fadeIn .35s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .sheet{transition:transform .32s cubic-bezier(.2,.8,.2,1);}
+  .sheet.hidden-sheet{transform:translateY(105%);}
+  .backdrop{transition:opacity .25s;}
+  .no-scrollbar::-webkit-scrollbar{display:none;}
+  .no-scrollbar{scrollbar-width:none;}
+  input[type=range]{accent-color:var(--accent);}
+  .speaking{animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,176,106,.5)}50%{box-shadow:0 0 0 10px rgba(212,176,106,0)}}
+
+  /* prefers-reduced-motion: 사용자 모션 최소화 선호 시 애니메이션 제거 */
+  @media (prefers-reduced-motion: reduce) {
+    .card3d, .bar, .sheet, .fade-in, .btn, .speaking { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app flex flex-col mx-auto w-full max-w-md px-4 pt-3 pb-3">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between">
+    <div>
+      <h1 class="serif text-2xl font-extrabold tracking-tight">Lexicon<span style="color:var(--accent)">.</span></h1>
+      <p class="text-[11px]" style="color:var(--muted)">Advanced &amp; Scholarly Vocabulary</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="btnList" class="btn w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--panel2);border:1px solid var(--line)" aria-label="단어 목록">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      </button>
+      <button id="btnShuffle" class="btn w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--panel2);border:1px solid var(--line)" aria-label="섞기">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+      </button>
+      <button id="btnSettings" class="btn w-10 h-10 rounded-full flex items-center justify-center" style="background:var(--panel2);border:1px solid var(--line)" aria-label="설정">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div id="stats" class="mt-3 grid grid-cols-4 gap-2 text-center"></div>
+
+  <!-- Filters -->
+  <nav id="filters" class="mt-3 flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1" aria-label="필터 선택"></nav>
+
+  <!-- Progress -->
+  <section class="mt-3">
+    <div class="flex justify-between text-[11px] mb-1.5" style="color:var(--muted)">
+      <span>세션 진도 <b id="progText" style="color:var(--ink)">0 / 0</b></span>
+      <span id="posText">카드 0 / 0</span>
+    </div>
+    <div class="h-2 w-full rounded-full overflow-hidden" style="background:var(--panel2)">
+      <div id="progBar" class="bar h-full rounded-full" style="width:0%;background:linear-gradient(90deg,var(--accent),#f1d9a3)"></div>
+    </div>
+  </section>
+
+  <!-- Card -->
+  <main class="scene flex-1 min-h-0 mt-4 mb-3" id="scene" aria-live="polite">
+    <div id="card" class="card3d" role="region" aria-label="단어 카드">
+      <div id="front" class="face front flex flex-col"></div>
+      <div id="back" class="face back"></div>
+    </div>
+    <div id="empty" class="hidden h-full flex-col items-center justify-center text-center rounded-[28px]" style="border:1px dashed var(--line)">
+      <div class="serif text-3xl mb-2">∅</div>
+      <p class="kr text-sm" style="color:var(--muted)">이 필터에 해당하는 단어가 없습니다.<br>다른 필터를 선택하십시오.</p>
+    </div>
+  </main>
+
+  <!-- Navigation -->
+  <div class="flex items-center justify-between gap-3">
+    <button id="btnPrev" class="btn flex-1 h-12 rounded-2xl flex items-center justify-center" style="background:var(--panel2);border:1px solid var(--line)" aria-label="이전">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button id="btnSpeak" class="btn w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style="background:var(--accent);color:#1a1405" aria-label="발음 듣기" aria-pressed="false">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+    </button>
+    <button id="btnNext" class="btn flex-1 h-12 rounded-2xl flex items-center justify-center" style="background:var(--panel2);border:1px solid var(--line)" aria-label="다음">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  <!-- Rating -->
+  <div class="mt-3 grid grid-cols-2 gap-3">
+    <button id="btnReview" class="btn h-12 rounded-2xl font-semibold kr text-sm flex items-center justify-center gap-2" aria-pressed="false">
+      <span>↻</span> 모름 · Review
+    </button>
+    <button id="btnKnown" class="btn h-12 rounded-2xl font-semibold kr text-sm flex items-center justify-center gap-2" aria-pressed="false">
+      <span>✓</span> 앎 · Known
+    </button>
+  </div>
+</div>
+
+<!-- Backdrop -->
+<div id="backdrop" class="backdrop fixed inset-0 bg-black/60 opacity-0 pointer-events-none z-40"></div>
+
+<!-- List Sheet -->
+<div id="listSheet" class="sheet hidden-sheet fixed left-0 right-0 bottom-0 z-50 mx-auto max-w-md rounded-t-3xl flex flex-col" style="background:var(--panel);border-top:1px solid var(--line);height:82dvh;padding-bottom:env(safe-area-inset-bottom)">
+  <div class="p-4 pb-2">
+    <div class="w-10 h-1 rounded-full mx-auto mb-3" style="background:var(--line)"></div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="serif text-xl font-bold">Word List</h2>
+      <button data-close class="btn text-sm px-3 py-1 rounded-full kr" style="background:var(--panel2)">닫기</button>
+    </div>
+    <input id="search" type="search" placeholder="단어·뜻 검색…" class="w-full h-11 px-4 rounded-xl outline-none kr text-[16px]" style="background:var(--bg);border:1px solid var(--line);color:var(--ink)">
+  </div>
+  <ul id="wordList" class="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5" role="list"></ul>
+</div>
+
+<!-- Settings Sheet -->
+<div id="setSheet" class="sheet hidden-sheet fixed left-0 right-0 bottom-0 z-50 mx-auto max-w-md rounded-t-3xl" style="background:var(--panel);border-top:1px solid var(--line);padding-bottom:calc(env(safe-area-inset-bottom) + 16px)">
+  <div class="p-5">
+    <div class="w-10 h-1 rounded-full mx-auto mb-3" style="background:var(--line)"></div>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="serif text-xl font-bold">Settings</h2>
+      <button data-close class="btn text-sm px-3 py-1 rounded-full kr" style="background:var(--panel2)">닫기</button>
+    </div>
+    <div class="space-y-5 kr text-sm">
+      <div>
+        <div class="flex justify-between mb-2"><span>발음 속도</span><b id="rateVal">0.90×</b></div>
+        <input id="rate" type="range" min="0.6" max="1.2" step="0.05" class="w-full">
+      </div>
+      <div>
+        <div class="mb-2">음성 (US English)</div>
+        <select id="voiceSel" class="w-full h-11 px-3 rounded-xl text-[16px]" style="background:var(--bg);border:1px solid var(--line);color:var(--ink)"></select>
+        <p class="text-[11px] mt-1.5" style="color:var(--muted)">iPhone은 설정 › 손쉬운 사용 › 읽기 및 말하기 › 음성에서 고품질(Enhanced) 음성을 내려받으면 더 자연스럽게 재생된다.</p>
+      </div>
+      <label class="flex items-center justify-between">
+        <span>카드 넘길 때 자동 발음</span>
+        <input id="autoSpeak" type="checkbox" class="w-5 h-5" style="accent-color:var(--accent)">
+      </label>
+      <label class="flex items-center justify-between">
+        <span>평가 후 자동으로 다음 카드</span>
+        <input id="autoAdvance" type="checkbox" class="w-5 h-5" style="accent-color:var(--accent)">
+      </label>
+      <button id="btnReset" class="btn w-full h-11 rounded-xl font-semibold" style="background:rgba(255,138,101,.12);color:var(--review);border:1px solid rgba(255,138,101,.35)">학습 기록 전체 초기화</button>
+      <p class="text-[11px] leading-relaxed" style="color:var(--muted)">홈 화면 설치: Safari 하단 공유 버튼 → ‘홈 화면에 추가’. 학습 기록은 이 기기의 브라우저 저장소에만 보관된다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast (스크린리더가 읽도록 aria-live 추가) -->
+<div id="toast" aria-live="polite" aria-atomic="true" class="fixed left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-full text-sm kr opacity-0 pointer-events-none transition-opacity duration-300" style="bottom:calc(env(safe-area-inset-bottom) + 96px);background:#f4ecd9;color:#1a1405;box-shadow:0 10px 30px rgba(0,0,0,.4)"></div>
+
+<script>
+/* ============================================================
+   DATASET — 60 original entries (advanced GRE/SAT/scholarly level)
+   ============================================================ */
+const WORDS = [
+{w:"abstruse",pos:"adj.",ko:"난해한, 심오한",def:"Difficult to understand because of obscurity or depth of thought; accessible only to specialists.",ex:"The footnote's abstruse treatment of hedge effectiveness satisfied the regulator but left most retail investors bewildered.",ety:"Latin abstrudere, 'to thrust away, conceal.' The meaning is hidden rather than merely complex — compare 'recondite.'"},
+{w:"adumbrate",pos:"v.",ko:"윤곽을 암시하다, 예고하다",def:"To outline faintly or partially; to foreshadow an event or idea without stating it fully.",ex:"The chairman's letter adumbrated a strategic retreat from retail lending that management would not formally announce for another year.",ety:"Latin adumbrare, 'to cast a shadow over' (umbra, shadow). A shadow reveals shape but not detail."},
+{w:"ameliorate",pos:"v.",ko:"개선하다, 완화하다",def:"To make a bad or unsatisfactory situation better or more tolerable.",ex:"Targeted liquidity facilities ameliorated, but did not cure, the funding stress in the regional banking sector.",ety:"Latin melior, 'better.' Implies partial improvement of something already problematic, not wholesale reform."},
+{w:"anodyne",pos:"adj.",ko:"무난한, 무미건조한",def:"Deliberately inoffensive and bland; unlikely to provoke dissent or interest.",ex:"The press release was so anodyne that analysts struggled to extract a single meaningful forward-looking statement.",ety:"Greek an- 'without' + odyne 'pain'; originally a painkiller. Now implies blandness designed to avoid friction."},
+{w:"apocryphal",pos:"adj.",ko:"출처가 의심스러운, 진위 불명의",def:"Of doubtful authenticity, though widely circulated as true.",ex:"The story that the founder sketched the business model on a napkin is almost certainly apocryphal.",ety:"Greek apokryphos, 'hidden'; via the Apocrypha, texts excluded from the biblical canon."},
+{w:"assiduous",pos:"adj.",ko:"근면한, 끈기 있는",def:"Showing persistent, careful, and diligent attention to a task.",ex:"Only an assiduous review of the intercompany ledgers revealed the circular flow of funds.",ety:"Latin assidere, 'to sit beside.' Evokes someone who stays at the desk until the work is done."},
+{w:"bellicose",pos:"adj.",ko:"호전적인",def:"Demonstrating aggression and a readiness to fight or start conflict.",ex:"The activist fund's bellicose open letter turned a routine proxy season into a public siege.",ety:"Latin bellum, 'war.' Stronger than 'belligerent' in suggesting temperament rather than a current state of war."},
+{w:"cavil",pos:"v.",ko:"트집 잡다",def:"To raise petty or frivolous objections.",ex:"Reviewers caviled at the paper's formatting while ignoring its genuinely novel identification strategy.",ety:"Latin cavillari, 'to jeer, quibble.' Always pejorative: the objection is trivial."},
+{w:"circumlocution",pos:"n.",ko:"완곡한 표현, 에두른 말",def:"The use of many words where fewer would suffice, especially to be vague or evasive.",ex:"After ten minutes of circumlocution, the CFO finally conceded that the covenant had been breached.",ety:"Latin circum 'around' + loqui 'to speak' — literally, talking around the point."},
+{w:"cogent",pos:"adj.",ko:"설득력 있는, 타당한",def:"Clear, logical, and compelling; persuasive through force of reasoning.",ex:"Her cogent critique of fair-value accounting reshaped the standard-setter's agenda.",ety:"Latin cogere, 'to drive together, compel.' A cogent argument compels assent."},
+{w:"contumacious",pos:"adj.",ko:"반항적인, 명령을 거역하는",def:"Stubbornly or willfully disobedient to authority, especially a court.",ex:"The firm's contumacious refusal to produce working papers drew sanctions from the oversight board.",ety:"Latin contumax, 'insolent, stubborn.' Carries a legal flavor of contempt toward lawful authority."},
+{w:"desultory",pos:"adj.",ko:"산만한, 일관성 없는",def:"Lacking a plan, purpose, or enthusiasm; passing aimlessly from one thing to another.",ex:"The board's desultory discussion of cyber risk ended without a single action item.",ety:"Latin desultor, a circus rider who leapt from horse to horse — hence jumping between topics."},
+{w:"diffident",pos:"adj.",ko:"자신감 없는, 소심한",def:"Modest or shy because of a lack of self-confidence.",ex:"The diffident junior associate had, in fact, spotted the error that the entire engagement team missed.",ety:"Latin dis- 'not' + fidere 'to trust.' Distrust of oneself, the opposite of 'confident.'"},
+{w:"disingenuous",pos:"adj.",ko:"솔직하지 못한, 위선적인",def:"Not candid or sincere, typically by pretending to know less than one does.",ex:"It was disingenuous of management to claim surprise at a liquidity shortfall flagged in its own forecasts.",ety:"dis- + ingenuous ('innocent, frank'). The pretense of naivety is the core of the word."},
+{w:"ebullient",pos:"adj.",ko:"열정이 넘치는, 활기찬",def:"Overflowing with enthusiasm, cheerfulness, or energy.",ex:"The ebullient founder seemed unaware that the term sheet had quietly diluted her control.",ety:"Latin ebullire, 'to boil over.' Enthusiasm bubbling out uncontrollably."},
+{w:"equivocate",pos:"v.",ko:"얼버무리다",def:"To use ambiguous language so as to conceal the truth or avoid commitment.",ex:"Pressed on the timing of the write-down, the CEO equivocated, citing 'evolving market conditions.'",ety:"Latin aequus 'equal' + vox 'voice' — speaking with equal voices, so no single meaning prevails."},
+{w:"eschew",pos:"v.",ko:"의도적으로 피하다",def:"To deliberately avoid using or doing something, typically on principle.",ex:"The fund eschews leverage entirely, accepting lower returns in exchange for resilience.",ety:"Old French eschiver, of Germanic origin ('to shun'). Implies principled, deliberate avoidance."},
+{w:"exculpate",pos:"v.",ko:"무죄를 입증하다",def:"To show or declare that someone is not guilty of wrongdoing.",ex:"The forensic review exculpated the branch staff and traced the fraud to a compromised vendor account.",ety:"Latin ex 'out of' + culpa 'blame.' Antonym: 'inculpate.'"},
+{w:"fastidious",pos:"adj.",ko:"꼼꼼한, 까다로운",def:"Very attentive to accuracy and detail; also, difficult to please.",ex:"A fastidious reviewer, she reconciled every footnote figure back to the trial balance.",ety:"Latin fastidium, 'loathing, disdain.' The modern sense retains a hint of being hard to satisfy."},
+{w:"fatuous",pos:"adj.",ko:"어리석은, 얼빠진",def:"Silly and pointless, often in a self-satisfied way.",ex:"The fatuous claim that the housing market 'cannot fall nationally' preceded one of the deepest downturns in decades.",ety:"Latin fatuus, 'foolish.' Suggests complacent rather than innocent foolishness."},
+{w:"feckless",pos:"adj.",ko:"무능한, 무책임한",def:"Lacking initiative, strength of character, or effectiveness.",ex:"Feckless oversight allowed the subsidiary to operate for years without an independent risk function.",ety:"Scots feck, a shortening of 'effect' — literally 'without effect.'"},
+{w:"gainsay",pos:"v.",ko:"부정하다, 반박하다",def:"To deny or contradict a fact or statement; to speak against.",ex:"No one could gainsay the empirical result, though many disputed its interpretation.",ety:"Old English gegn 'against' + say. Usually appears in negative constructions: 'none can gainsay.'"},
+{w:"garrulous",pos:"adj.",ko:"수다스러운",def:"Excessively talkative, especially on trivial matters.",ex:"The garrulous keynote speaker consumed the Q&A slot with anecdotes about his early career.",ety:"Latin garrire, 'to chatter.' Implies rambling rather than eloquent speech."},
+{w:"hegemony",pos:"n.",ko:"패권, 주도권",def:"Leadership or dominance, especially by one state or group over others.",ex:"The dollar's hegemony in trade invoicing gives the issuing central bank extraordinary global reach.",ety:"Greek hegemon, 'leader.' In political theory (Gramsci), dominance secured through consent and culture, not only force."},
+{w:"iconoclast",pos:"n.",ko:"인습 타파주의자",def:"A person who attacks cherished beliefs or established institutions.",ex:"An iconoclast within the profession, he argued that the audit opinion had become a ritual rather than a signal.",ety:"Greek eikon 'image' + klan 'to break' — originally destroyers of religious images."},
+{w:"impecunious",pos:"adj.",ko:"무일푼의, 가난한",def:"Having little or no money.",ex:"The startup's impecunious early years forced a discipline that later investors came to prize.",ety:"Latin in- 'not' + pecunia 'money' (from pecus, 'cattle' — early wealth was livestock)."},
+{w:"inchoate",pos:"adj.",ko:"초기의, 미완성의",def:"Just begun and not yet fully formed or developed.",ex:"The committee's inchoate framework for climate disclosure lacked any measurement guidance.",ety:"Latin inchoare, 'to begin.' Not chaotic — merely embryonic."},
+{w:"ineffable",pos:"adj.",ko:"형언할 수 없는",def:"Too great or extreme to be expressed or described in words.",ex:"The archive conveyed an ineffable sense of how fragile the postwar financial order had been.",ety:"Latin in- 'not' + effari 'to speak out.' Often positive or reverent in tone."},
+{w:"inimical",pos:"adj.",ko:"해로운, 적대적인",def:"Tending to obstruct or harm; hostile.",ex:"Frequent rule changes are inimical to long-term capital investment.",ety:"Latin inimicus, 'enemy' (in- + amicus, 'friend'). Often used of conditions rather than persons."},
+{w:"insouciant",pos:"adj.",ko:"태평한, 무관심한",def:"Showing a casual lack of concern; nonchalant.",ex:"Markets remained insouciant about duration risk until the yield curve moved violently.",ety:"French in- + soucier, 'to care.' A carefree air that may be charming or reckless."},
+{w:"intransigent",pos:"adj.",ko:"비타협적인",def:"Unwilling or refusing to change one's views or to agree.",ex:"Intransigent creditors blocked the restructuring plan for eighteen months.",ety:"Spanish los intransigentes, nineteenth-century radicals who refused compromise; from Latin transigere, 'to come to terms.'"},
+{w:"laconic",pos:"adj.",ko:"간결한, 말수가 적은",def:"Using very few words; concise to the point of seeming curt.",ex:"The auditor's laconic reply — 'Not supportable' — ended the debate over the valuation.",ety:"From Laconia, home of the Spartans, famed for terse speech."},
+{w:"lugubrious",pos:"adj.",ko:"침울한, 애처로운",def:"Looking or sounding sad and dismal, often exaggeratedly so.",ex:"The lugubrious tone of the earnings call sent the share price lower than the numbers alone justified.",ety:"Latin lugere, 'to mourn.' Frequently implies theatrical gloom."},
+{w:"magnanimous",pos:"adj.",ko:"관대한, 아량 있는",def:"Generous or forgiving, especially toward a rival or someone less powerful.",ex:"In a magnanimous gesture, the acquirer retained the target's entire management team.",ety:"Latin magnus 'great' + animus 'soul' — greatness of spirit."},
+{w:"mendacious",pos:"adj.",ko:"거짓의, 허위의",def:"Not telling the truth; habitually dishonest.",ex:"The prospectus contained mendacious claims about the reserves backing the token.",ety:"Latin mendax, 'lying.' Stronger than 'untruthful': implies a pattern of deceit."},
+{w:"obdurate",pos:"adj.",ko:"완고한, 고집 센",def:"Stubbornly refusing to change one's opinion or course of action.",ex:"The obdurate partner rejected every proposal to rotate the engagement team.",ety:"Latin obdurare, 'to harden.' Evokes a hardened heart or will."},
+{w:"obsequious",pos:"adj.",ko:"아첨하는, 비굴한",def:"Excessively eager to please or obey.",ex:"The obsequious consultants rewrote their findings to match the client's preferred narrative.",ety:"Latin obsequi, 'to comply with.' Compliance carried to servility."},
+{w:"obviate",pos:"v.",ko:"(필요·문제를) 미연에 제거하다",def:"To remove a need or difficulty; to prevent by anticipatory action.",ex:"Automated three-way matching obviates the need for most manual invoice reviews.",ety:"Latin obviare, 'to meet in the way, prevent.' Not a synonym for 'make obvious.'"},
+{w:"parsimonious",pos:"adj.",ko:"인색한; (모형이) 간결한",def:"Unwilling to spend money or resources; in science, using the fewest assumptions necessary.",ex:"The parsimonious model, with just three predictors, outperformed its elaborate rivals out of sample.",ety:"Latin parcere, 'to spare.' The 'principle of parsimony' (Occam's razor) gives it a positive academic sense."},
+{w:"pellucid",pos:"adj.",ko:"명료한, 투명한",def:"Translucently clear; easily understood.",ex:"Her pellucid prose made the intricacies of deferred tax accessible to first-year students.",ety:"Latin per 'through' + lucere 'to shine.' Light passing cleanly through."},
+{w:"perfunctory",pos:"adj.",ko:"형식적인, 건성의",def:"Carried out with minimum effort or reflection, as a routine duty.",ex:"A perfunctory walkthrough of controls cannot substitute for testing their operating effectiveness.",ety:"Latin perfungi, 'to get through with, discharge.' Doing a task merely to be done with it."},
+{w:"pernicious",pos:"adj.",ko:"(서서히) 해로운, 치명적인",def:"Having a harmful effect, especially in a gradual or subtle way.",ex:"The pernicious effect of earnings targets was a slow erosion of judgment across the finance function.",ety:"Latin pernicies, 'ruin' (nex, 'death'). Emphasizes insidious, cumulative harm."},
+{w:"perspicacious",pos:"adj.",ko:"통찰력 있는, 명민한",def:"Having a ready insight into and understanding of things.",ex:"A perspicacious analyst noticed that receivables were growing twice as fast as revenue.",ety:"Latin perspicere, 'to see through.' Do not confuse with 'perspicuous' (clearly expressed)."},
+{w:"platitude",pos:"n.",ko:"상투적인 말, 진부한 표현",def:"A remark used too often to be interesting or thoughtful.",ex:"The governance report relied on platitudes about 'tone at the top' rather than concrete evidence.",ety:"French plat, 'flat.' A flat, lifeless statement."},
+{w:"prevaricate",pos:"v.",ko:"얼버무리다, 발뺌하다",def:"To speak or act evasively; to avoid giving a direct answer.",ex:"When asked about related-party transactions, the director prevaricated and requested more time.",ety:"Latin praevaricari, 'to walk crookedly' (varus, 'bow-legged'). Deviating from the straight path of truth."},
+{w:"probity",pos:"n.",ko:"청렴, 정직",def:"The quality of having strong moral principles; integrity and uprightness.",ex:"The profession's franchise ultimately rests on the probity of individual practitioners.",ety:"Latin probus, 'good, honest' (cf. 'probe,' 'prove'). Integrity that withstands testing."},
+{w:"proclivity",pos:"n.",ko:"성향, 경향",def:"A natural tendency or inclination toward something, often undesirable.",ex:"The trader's proclivity for doubling down on losing positions went unchecked for years.",ety:"Latin proclivis, 'sloping forward.' A slope one naturally slides down."},
+{w:"propitiate",pos:"v.",ko:"달래다, 환심을 사다",def:"To win or regain the favor of someone by doing something that pleases them.",ex:"Management raised the dividend to propitiate restless institutional shareholders.",ety:"Latin propitius, 'favorable, gracious.' Originally appeasing a deity."},
+{w:"quixotic",pos:"adj.",ko:"비현실적으로 이상주의적인",def:"Exceedingly idealistic; unrealistic and impractical.",ex:"His quixotic campaign to abolish quarterly reporting found admirers but no allies.",ety:"From Don Quixote, Cervantes's knight who tilted at windmills. Noble but impractical."},
+{w:"recalcitrant",pos:"adj.",ko:"반항하는, 다루기 힘든",def:"Having an obstinately uncooperative attitude toward authority or discipline.",ex:"Recalcitrant subsidiaries delayed the group's adoption of a common chart of accounts.",ety:"Latin recalcitrare, 'to kick back' (calx, 'heel') — like a stubborn mule."},
+{w:"recondite",pos:"adj.",ko:"난해한, 잘 알려지지 않은",def:"Little known; dealing with abstruse subject matter.",ex:"The case turned on a recondite provision of nineteenth-century trust law.",ety:"Latin recondere, 'to put away, hide.' Knowledge stored out of common reach."},
+{w:"sanguine",pos:"adj.",ko:"낙관적인",def:"Optimistic or positive, especially in an apparently difficult situation.",ex:"Few investors were as sanguine as management about refinancing the debt in a rising-rate environment.",ety:"Latin sanguis, 'blood.' In humoral theory, a blood-dominant temperament was cheerful and confident."},
+{w:"sophistry",pos:"n.",ko:"궤변",def:"The use of clever but fallacious arguments, especially to deceive.",ex:"Classifying the loss as 'non-recurring' for the fifth consecutive year was pure sophistry.",ety:"Greek sophistes, paid teachers of rhetoric whom Plato accused of valuing persuasion over truth."},
+{w:"sycophant",pos:"n.",ko:"아첨꾼",def:"A person who acts obsequiously toward someone important to gain advantage.",ex:"Surrounded by sycophants, the chairman received no warning about the deteriorating loan book.",ety:"Greek sykophantes, literally 'fig-shower,' originally an informer or slanderer; the flattery sense developed later."},
+{w:"tendentious",pos:"adj.",ko:"편향된, 특정 견해를 주장하는",def:"Expressing or promoting a particular cause or point of view, especially a controversial one.",ex:"The lobby group's tendentious study omitted every period in which the policy had failed.",ety:"Medieval Latin tendentia, 'tendency'; modeled on German tendenziös. Argument disguised as analysis."},
+{w:"torpid",pos:"adj.",ko:"무기력한, 둔한",def:"Mentally or physically inactive; lethargic.",ex:"A decade of torpid growth left the region's banks with few creditworthy borrowers.",ety:"Latin torpere, 'to be numb' (cf. 'torpedo,' the numbing electric ray)."},
+{w:"truculent",pos:"adj.",ko:"공격적인, 반항적인",def:"Eager or quick to argue or fight; aggressively defiant.",ex:"The truculent witness challenged every premise of the prosecutor's questions.",ety:"Latin trux, 'fierce, savage.' Combative bearing rather than overt violence."},
+{w:"venal",pos:"adj.",ko:"매수 가능한, 부패한",def:"Showing or motivated by susceptibility to bribery; open to corruption.",ex:"A venal inspector certified the collateral without ever visiting the warehouse.",ety:"Latin venum, 'sale.' Something — or someone — for sale. Distinguish from 'venial' (pardonable)."},
+{w:"vitiate",pos:"v.",ko:"손상시키다, 무효화하다",def:"To spoil or impair the quality of; in law, to make invalid.",ex:"A single undisclosed conflict of interest can vitiate the entire fairness opinion.",ety:"Latin vitium, 'fault, vice.' Contamination that undermines the whole."},
+{w:"zeitgeist",pos:"n.",ko:"시대정신",def:"The defining spirit or mood of a particular period, as shown by its ideas and beliefs.",ex:"The zeitgeist of the early 2020s favored growth narratives over discounted cash flows.",ety:"German Zeit 'time' + Geist 'spirit.' Popularized through Hegelian philosophy of history."}
+];
+
+/* ============================ STATE ============================ */
+const KEY = 'lexicon_pwa_v1';
+const DEFAULTS = {status:{}, bm:{}, rate:0.9, voice:'', filter:'all', autoSpeak:false, autoAdvance:true};
+let store = load();
+let deck = [], idx = 0, flipped = false, sessionDone = new Set();
+
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s) return Object.assign({}, DEFAULTS, s); }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+
+const $ = id => document.getElementById(id);
+const cardEl = $('card'), frontEl = $('front'), backEl = $('back');
+
+/* ============================ FILTERS ============================ */
+const FILTERS = [
+  {k:'all', t:'전체'},
+  {k:'new', t:'미학습'},
+  {k:'review', t:'복습'},
+  {k:'known', t:'앎'},
+  {k:'bm', t:'★ 북마크'}
+];
+function matches(w, f){
+  const s = store.status[w.w];
+  if(f==='new') return !s;
+  if(f==='review') return s==='review';
+  if(f==='known') return s==='known';
+  if(f==='bm') return !!store.bm[w.w];
+  return true;
+}
+function buildDeck(shuffle){
+  deck = WORDS.filter(w => matches(w, store.filter));
+  if(shuffle){
+    for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+  }
+  idx = 0; sessionDone = new Set();
+  resetFlip(); render(true);
+}
+
+/* ============================ RENDER ============================ */
+function renderStats(){
+  const known = WORDS.filter(w=>store.status[w.w]==='known').length;
+  const review = WORDS.filter(w=>store.status[w.w]==='review').length;
+  const bm = WORDS.filter(w=>store.bm[w.w]).length;
+  const items = [
+    {n:WORDS.length, t:'Total', c:'var(--ink)'},
+    {n:known, t:'Known', c:'var(--known)'},
+    {n:review, t:'Review', c:'var(--review)'},
+    {n:bm, t:'Saved', c:'var(--accent)'}
+  ];
+  $('stats').innerHTML = items.map(i=>`
+    <div class="rounded-xl py-2" style="background:var(--panel);border:1px solid var(--line)">
+      <div class="text-lg font-semibold" style="color:${i.c}">${i.n}</div>
+      <div class="text-[10px] uppercase tracking-wider" style="color:var(--muted)">${i.t}</div>
+    </div>`).join('');
+}
+function renderFilters(){
+  $('filters').innerHTML = FILTERS.map(f=>{
+    const cnt = WORDS.filter(w=>matches(w,f.k)).length;
+    return `<button data-f="${f.k}" class="chip btn kr text-xs px-3.5 py-1.5 rounded-full ${store.filter===f.k?'active':''}" aria-pressed="${store.filter===f.k?'true':'false'}">${f.t} <span class="opacity-70">${cnt}</span></button>`;
+  }).join('');
+}
+function renderProgress(){
+  const total = deck.length, done = sessionDone.size;
+  $('progText').textContent = `${done} / ${total}`;
+  $('posText').textContent = total ? `카드 ${idx+1} / ${total}` : '카드 0 / 0';
+  $('progBar').style.width = total ? (done/total*100)+'%' : '0%';
+}
+function iconStar(on){
+  return `<svg width="22" height="22" viewBox="0 0 24 24" fill="${on?'var(--accent)':'none'}" stroke="${on?'var(--accent)':'currentColor'}" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>`;
+}
+const iconSpeaker = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+
+function statusBadge(w){
+  const s = store.status[w.w];
+  if(s==='known') return `<span data-badge="status" class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background:rgba(62,207,142,.15);color:var(--known)">KNOWN</span>`;
+  if(s==='review') return `<span data-badge="status" class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background:rgba(255,138,101,.15);color:var(--review)">REVIEW</span>`;
+  return `<span data-badge="status" class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background:rgba(151,160,195,.12);color:var(--muted)">NEW</span>`;
+}
+
+function renderCard(animate){
+  const empty = deck.length===0;
+  $('empty').classList.toggle('hidden', !empty);
+  $('empty').classList.toggle('flex', empty);
+  cardEl.classList.toggle('hidden', empty);
+  ['btnPrev','btnNext','btnSpeak','btnReview','btnKnown'].forEach(id=>{ $(id).disabled = empty; $(id).style.opacity = empty ? .35 : 1; });
+  if(empty) return;
+
+  const w = deck[idx];
+  const bmPressed = !!store.bm[w.w] ? 'true' : 'false';
+  frontEl.innerHTML = `
+    <div class="flex items-center justify-between px-5 pt-5">
+      ${statusBadge(w)}
+      <button data-act="bm" class="btn p-1" aria-label="북마크" aria-pressed="${bmPressed}">${iconStar(!!store.bm[w.w])}</button>
+    </div>
+    <div class="flex-1 flex flex-col items-center justify-center px-6 text-center ${animate?'fade-in':''}">
+      <div class="serif font-extrabold leading-none" style="font-size:clamp(38px,11vw,54px)">${w.w}</div>
+      <div class="serif italic mt-3 text-lg" style="color:var(--accent)">${w.pos}</div>
+      <button data-act="say-word" class="btn mt-6 h-11 px-5 rounded-full flex items-center gap-2 text-sm" style="background:rgba(212,176,106,.12);color:var(--accent);border:1px solid rgba(212,176,106,.35)">
+        ${iconSpeaker}<span>Pronounce</span>
+      </button>
+    </div>
+    <div class="pb-5 text-center text-[11px] kr" style="color:var(--muted)">탭하여 뒤집기 · 좌우로 밀어 이동</div>`;
+
+  backEl.innerHTML = `
+    <div class="p-5 pb-7">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="serif text-3xl font-extrabold leading-tight">${w.w}</div>
+          <div class="serif italic text-sm mt-0.5" style="color:var(--accent)">${w.pos}</div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button data-act="say-word" class="btn w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(212,176,106,.12);color:var(--accent)" aria-label="단어 발음">${iconSpeaker}</button>
+          <button data-act="bm" class="btn p-1" aria-label="북마크" aria-pressed="${bmPressed}">${iconStar(!!store.bm[w.w])}</button>
+        </div>
+      </div>
+      <div class="kr mt-3 text-[15px] font-medium px-3 py-2 rounded-xl inline-block" style="background:rgba(122,162,255,.1);color:#c9d6ff">${w.ko}</div>
+
+      <div class="mt-5"><div class="label">Definition</div>
+        <p class="mt-1.5 text-[15px] leading-relaxed">${w.def}</p></div>
+
+      <div class="mt-5"><div class="flex items-center justify-between"><div class="label">Example</div>
+          <button data-act="say-ex" class="btn text-[11px] flex items-center gap-1 px-2.5 py-1 rounded-full" style="background:var(--bg);color:var(--muted);border:1px solid var(--line)">${iconSpeaker}<span>Listen</span></button></div>
+        <p class="mt-1.5 text-[15px] leading-relaxed italic serif pl-3" style="border-left:2px solid var(--accent);color:#e4e7f5">${highlight(w.ex, w.w)}</p></div>
+
+      <div class="mt-5"><div class="label">Etymology &amp; Nuance</div>
+        <p class="mt-1.5 text-[13.5px] leading-relaxed" style="color:#c3c9e3">${w.ety}</p></div>
+    </div>`;
+  backEl.scrollTop = 0;
+}
+function escapeRegExp(string) {
+  return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function highlight(sentence, word){
+  const stem = word.length>6 ? word.slice(0, word.length-2) : word.slice(0, Math.max(4, word.length-1));
+  const esc = escapeRegExp(stem);
+  const re = new RegExp(`\\b(${esc}[a-z]*)`, 'i');
+  return sentence.replace(re, '<b style="color:var(--accent);font-style:normal">$1</b>');
+}
+function renderRating(){
+  const w = deck[idx]; const s = w ? store.status[w.w] : null;
+  const rv = $('btnReview'), kn = $('btnKnown');
+  rv.style.cssText = s==='review'
+    ? 'background:var(--review);color:#2a0f05;border:1px solid var(--review)'
+    : 'background:rgba(255,138,101,.08);color:var(--review);border:1px solid rgba(255,138,101,.35)';
+  kn.style.cssText = s==='known'
+    ? 'background:var(--known);color:#04210f;border:1px solid var(--known)'
+    : 'background:rgba(62,207,142,.08);color:var(--known);border:1px solid rgba(62,207,142,.35)';
+  if(!w){ rv.style.opacity=.35; kn.style.opacity=.35; }
+  // aria-pressed 업데이트
+  rv.setAttribute('aria-pressed', s==='review' ? 'true' : 'false');
+  kn.setAttribute('aria-pressed', s==='known' ? 'true' : 'false');
+}
+function render(animate){
+  renderStats(); renderFilters(); renderProgress(); renderCard(animate); renderRating();
+}
+
+/* ============================ CARD ACTIONS ============================ */
+function resetFlip(){
+  cardEl.style.transition = 'none';
+  cardEl.classList.remove('flipped'); flipped = false;
+  void cardEl.offsetWidth;
+  cardEl.style.transition = '';
+}
+function flip(){ if(!deck.length) return; flipped = !flipped; cardEl.classList.toggle('flipped', flipped); }
+function go(delta){
+  if(!deck.length) return;
+  const n = idx + delta;
+  if(n<0){ toast('첫 번째 카드이다'); return; }
+  if(n>=deck.length){ toast(sessionDone.size===deck.length ? '🎉 세션 완료 — 섞기로 새 라운드를 시작하라' : '마지막 카드이다'); return; }
+  idx = n; resetFlip(); renderCard(true); renderRating(); renderProgress();
+  if(store.autoSpeak) speak(deck[idx].w);
+}
+function rate(status){
+  if(!deck.length) return;
+  const w = deck[idx];
+  store.status[w.w] = status; sessionDone.add(w.w); save();
+  renderStats(); renderFilters(); renderProgress(); renderRating();
+  const badgeHost = frontEl.querySelector('[data-badge="status"]'); if(badgeHost) badgeHost.outerHTML = statusBadge(w);
+  if(sessionDone.size===deck.length){ toast('🎉 이번 세션의 모든 카드를 평가했다'); return; }
+  if(store.autoAdvance && idx < deck.length-1) setTimeout(()=>go(1), 240);
+}
+function toggleBm(){
+  const w = deck[idx]; if(!w) return;
+  if(store.bm[w.w]) delete store.bm[w.w]; else store.bm[w.w] = true;
+  save();
+  document.querySelectorAll('[data-act="bm"]').forEach(b=>{
+    b.innerHTML = iconStar(!!store.bm[w.w]);
+    b.setAttribute('aria-pressed', !!store.bm[w.w] ? 'true' : 'false');
+  });
+  renderStats(); renderFilters();
+  toast(store.bm[w.w] ? '★ 북마크에 추가했다' : '북마크에서 제거했다');
+}
+
+/* ============================ TTS (Web Speech API) ============================ */
+let voices = [];
+function loadVoices(){
+  if(!('speechSynthesis' in window)) return;
+  voices = speechSynthesis.getVoices().filter(v=>/^en[-_]US/i.test(v.lang));
+  const sel = $('voiceSel');
+  const opts = ['<option value="">자동 선택 (권장)</option>']
+    .concat(voices.map(v=>`<option value="${v.name}" ${store.voice===v.name?'selected':''}>${v.name}${v.localService?'':' (online)'}</option>`));
+  sel.innerHTML = opts.join('');
+}
+function pickVoice(){
+  if(store.voice){ const v = voices.find(v=>v.name===store.voice); if(v) return v; }
+  const pref = ['Samantha (Enhanced)','Ava (Premium)','Ava (Enhanced)','Samantha','Ava','Allison','Susan','Alex','Google US English','Microsoft Aria','Microsoft Jenny'];
+  for(const p of pref){ const v = voices.find(v=>v.name.includes(p)); if(v) return v; }
+  return voices.find(v=>v.localService) || voices[0] || null;
+}
+function speak(text){
+  if(!('speechSynthesis' in window)){ toast('이 브라우저는 음성 합성을 지원하지 않는다'); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; const v = pickVoice(); if(v) u.voice = v;
+    u.rate = store.rate; u.pitch = 1; u.volume = 1;
+    const btn = $('btnSpeak');
+    u.onstart = ()=>btn.classList.add('speaking');
+    u.onend = u.onerror = ()=>btn.classList.remove('speaking');
+    speechSynthesis.speak(u);
+  }catch(e){ toast('발음 재생에 실패했다'); }
+}
+if('speechSynthesis' in window){
+  loadVoices();
+  if(typeof speechSynthesis.onvoiceschanged !== 'undefined') speechSynthesis.onvoiceschanged = loadVoices;
+  setTimeout(loadVoices, 600);
+}
+
+/* ============================ EVENTS ============================ */
+let sx=0, sy=0, swiped=false;
+const scene = $('scene');
+scene.addEventListener('touchstart', e=>{ const t=e.touches[0]; sx=t.clientX; sy=t.clientY; swiped=false; }, {passive:true});
+scene.addEventListener('touchend', e=>{
+  const t=e.changedTouches[0]; const dx=t.clientX-sx, dy=t.clientY-sy;
+  if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){ swiped=true; dx<0 ? go(1) : go(-1); }
+}, {passive:true});
+
+cardEl.addEventListener('click', e=>{
+  if(swiped){ swiped=false; return; }
+  const a = e.target.closest('[data-act]');
+  if(a){
+    e.stopPropagation();
+    const w = deck[idx];
+    if(a.dataset.act==='bm') toggleBm();
+    if(a.dataset.act==='say-word') speak(w.w);
+    if(a.dataset.act==='say-ex') speak(w.ex);
+    return;
+  }
+  flip();
+});
+
+$('btnPrev').onclick = ()=>go(-1);
+$('btnNext').onclick = ()=>go(1);
+$('btnSpeak').onclick = ()=>{ const w=deck[idx]; if(w) speak(flipped ? `${w.w}. ${w.ex}` : w.w); };
+$('btnReview').onclick = ()=>rate('review');
+$('btnKnown').onclick = ()=>rate('known');
+$('btnShuffle').onclick = ()=>{ buildDeck(true); toast('카드를 섞고 새 세션을 시작했다'); };
+
+$('filters').addEventListener('click', e=>{
+  const b = e.target.closest('[data-f]'); if(!b) return;
+  store.filter = b.dataset.f; save(); buildDeck(false);
+});
+
+document.addEventListener('keydown', e=>{
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  if(e.key===' '){ e.preventDefault(); flip(); }
+  else if(e.key==='ArrowRight') go(1);
+  else if(e.key==='ArrowLeft') go(-1);
+  else if(e.key==='p') { const w=deck[idx]; if(w) speak(w.w); }
+  else if(e.key==='k') rate('known');
+  else if(e.key==='r') rate('review');
+  else if(e.key==='b') toggleBm();
+});
+
+/* ============================ SHEETS ============================ */
+const backdrop = $('backdrop');
+function openSheet(id){
+  $(id).classList.remove('hidden-sheet');
+  backdrop.classList.remove('pointer-events-none'); backdrop.style.opacity = 1;
+}
+function closeSheets(){
+  ['listSheet','setSheet'].forEach(id=>$(id).classList.add('hidden-sheet'));
+  backdrop.classList.add('pointer-events-none'); backdrop.style.opacity = 0;
+  $('search').blur();
+}
+backdrop.onclick = closeSheets;
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick = closeSheets);
+
+function renderList(q){
+  q = (q||'').trim().toLowerCase();
+  const dot = s => s==='known' ? 'var(--known)' : s==='review' ? 'var(--review)' : 'var(--line)';
+  const rows = WORDS.filter(w => !q || w.w.toLowerCase().includes(q) || w.ko.toLowerCase().includes(q) || w.def.toLowerCase().includes(q));
+  $('wordList').innerHTML = rows.length ? rows.map(w=>`
+    <li>
+      <button data-w="${w.w}" class="btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left" style="background:var(--panel2)">
+        <span class="w-2 h-2 rounded-full shrink-0" style="background:${dot(store.status[w.w])}"></span>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-baseline gap-2"><span class="serif font-bold text-[17px]">${w.w}</span><span class="serif italic text-xs" style="color:var(--accent)">${w.pos}</span></div>
+          <div class="kr text-xs truncate" style="color:var(--muted)">${w.ko}</div>
+        </div>
+        ${store.bm[w.w] ? '<span style="color:var(--accent)">★</span>' : ''}
+      </button>
+    </li>`).join('') : `<li class="kr text-sm text-center py-10" style="color:var(--muted)">검색 결과가 없다</li>`;
+}
+$('btnList').onclick = ()=>{ renderList($('search').value); openSheet('listSheet'); };
+$('search').addEventListener('input', e=>renderList(e.target.value));
+$('wordList').addEventListener('click', e=>{
+  const li = e.target.closest('[data-w]'); if(!li) return;
+  const word = li.dataset.w;
+  let i = deck.findIndex(w=>w.w===word);
+  if(i<0){ store.filter='all'; save(); buildDeck(false); i = deck.findIndex(w=>w.w===word); }
+  idx = i; resetFlip(); render(true); closeSheets();
+});
+
+$('btnSettings').onclick = ()=>{
+  $('rate').value = store.rate; $('rateVal').textContent = Number(store.rate).toFixed(2)+'×';
+  $('autoSpeak').checked = store.autoSpeak; $('autoAdvance').checked = store.autoAdvance;
+  loadVoices(); openSheet('setSheet');
+};
+$('rate').addEventListener('input', e=>{ store.rate = parseFloat(e.target.value); $('rateVal').textContent = store.rate.toFixed(2)+'×'; save(); });
+$('rate').addEventListener('change', ()=>speak('perspicacious'));
+$('voiceSel').addEventListener('change', e=>{ store.voice = e.target.value; save(); speak('The voice has been updated.'); });
+$('autoSpeak').addEventListener('change', e=>{ store.autoSpeak = e.target.checked; save(); });
+$('autoAdvance').addEventListener('change', e=>{ store.autoAdvance = e.target.checked; save(); });
+$('btnReset').onclick = ()=>{
+  if(!confirm('모든 학습 기록(앎/복습/북마크)을 초기화한다. 계속하겠는가?')) return;
+  store.status = {}; store.bm = {}; store.filter = 'all'; save();
+  closeSheets(); buildDeck(false); toast('학습 기록을 초기화했다');
+};
+
+/* ============================ TOAST ============================ */
+let toastTimer;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.style.opacity = 0, 1800);
+}
+
+/* ============================ PWA: ICON + MANIFEST ============================ */
+(function setupPWA(){
+  try{
+    const c = document.createElement('canvas'); c.width = c.height = 512;
+    const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0,0,512,512);
+    grd.addColorStop(0,'#1d2752'); grd.addColorStop(1,'#0b1020');
+    g.fillStyle = grd; g.fillRect(0,0,512,512);
+    g.strokeStyle = 'rgba(212,176,106,.55)'; g.lineWidth = 10;
+    g.strokeRect(60,60,392,392);
+    g.fillStyle = '#d4b06a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold 250px Georgia, serif'; g.fillText('L', 236, 268);
+    g.beginPath(); g.arc(352, 352, 22, 0, Math.PI*2); g.fill();
+    const icon = c.toDataURL('image/png');
+    $('appleIcon').href = icon; $('favIcon').href = icon;
+    const manifest = {
+      name: 'Lexicon Pro — Advanced Vocabulary',
+      short_name: 'Lexicon',
+      description: 'Advanced & scholarly English vocabulary flashcards with native US pronunciation.',
+      start_url: location.href.split('#')[0],
+      scope: location.href.replace(/[^/]*$/, ''),
+      display: 'standalone',
+      orientation: 'portrait',
+      background_color: '#0b1020',
+      theme_color: '#0b1020',
+      icons: [{src: icon, sizes: '512x512', type: 'image/png', purpose: 'any maskable'}]
+    };
+    $('manifestLink').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'}));
+  }catch(e){}
+})();
+
+/* iOS standalone: prevent pinch-zoom gesture */
+document.addEventListener('gesturestart', e=>e.preventDefault());
+
+/* ============================ INIT ============================ */
+buildDeck(false);
+</script>
+</body>
+</html>
