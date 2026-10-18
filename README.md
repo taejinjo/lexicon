@@ -1,0 +1,2 @@
+# lexicon
+Study foreign languages
